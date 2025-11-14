@@ -1,8 +1,9 @@
-.PHONY: help test test-verbose run migrate-up migrate-down migrate-create clean db-up db-down
+.PHONY: help test test-verbose run migrate-up migrate-down migrate-create clean db-up db-down proto
 
 # Default target
 help:
 	@echo "Available targets:"
+	@echo "  make proto         - Generate Go code from protobuf definitions"
 	@echo "  make test          - Run all tests"
 	@echo "  make test-verbose  - Run tests with verbose output"
 	@echo "  make run           - Run the API server"
@@ -61,9 +62,19 @@ migrate-create:
 	fi
 	migrate create -ext sql -dir migrations -seq $(NAME)
 
+# Generate Go code from protobuf definitions
+proto:
+	@echo "Generating Go code from protobuf..."
+	@mkdir -p proto/pb
+	protoc --go_out=. --go_opt=paths=source_relative \
+		--go_opt=Mproto/pim.proto=apidemo1/proto/pb \
+		proto/*.proto
+	@echo "✓ Protobuf code generated in proto/pb/"
+
 # Clean build artifacts
 clean:
 	@echo "Cleaning build artifacts..."
 	go clean
 	rm -rf bin/
+	rm -rf proto/pb/
 

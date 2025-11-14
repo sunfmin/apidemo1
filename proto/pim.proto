@@ -1,0 +1,197 @@
+syntax = "proto3";
+
+package pim;
+
+option go_package = "apidemo1/proto/pb;pb";
+
+import "google/protobuf/timestamp.proto";
+
+// ============================================================================
+// Common Types
+// ============================================================================
+
+// AttributeValue represents a typed attribute value
+message AttributeValue {
+  string type = 1;   // "string", "number", "boolean", "date"
+  oneof value {
+    string string_value = 2;
+    double number_value = 3;
+    bool boolean_value = 4;
+    string date_value = 5;  // ISO 8601 format
+  }
+}
+
+// Pagination metadata for list responses
+message Pagination {
+  int32 page = 1;
+  int32 page_size = 2;
+  int32 total_items = 3;
+  int32 total_pages = 4;
+}
+
+// ErrorResponse for API errors
+message ErrorResponse {
+  ErrorDetail error = 1;
+}
+
+message ErrorDetail {
+  string code = 1;
+  string message = 2;
+  map<string, string> details = 3;
+}
+
+// ============================================================================
+// Product Messages
+// ============================================================================
+
+// Product represents a product in the PIM system
+message Product {
+  string id = 1;
+  string name = 2;
+  string sku = 3;
+  string description = 4;
+  string product_type_id = 5;
+  map<string, AttributeValue> attributes = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+// ProductCreateRequest for creating a new product
+message ProductCreateRequest {
+  string name = 1;
+  string sku = 2;
+  string description = 3;
+  string product_type_id = 4;
+  map<string, AttributeValue> attributes = 5;
+}
+
+// ProductUpdateRequest for updating a product
+message ProductUpdateRequest {
+  string name = 1;
+  string description = 2;
+  string product_type_id = 3;
+  map<string, AttributeValue> attributes = 4;
+}
+
+// ProductListResponse for listing products
+message ProductListResponse {
+  repeated Product products = 1;
+  Pagination pagination = 2;
+}
+
+// ============================================================================
+// Variant Messages
+// ============================================================================
+
+// Variant represents a product variant
+message Variant {
+  string id = 1;
+  string product_id = 2;
+  string sku = 3;
+  map<string, AttributeValue> attributes = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// VariantCreateRequest for creating a new variant
+message VariantCreateRequest {
+  string sku = 1;
+  map<string, AttributeValue> attributes = 2;
+}
+
+// VariantUpdateRequest for updating a variant
+message VariantUpdateRequest {
+  map<string, AttributeValue> attributes = 1;
+}
+
+// VariantListResponse for listing variants
+message VariantListResponse {
+  repeated Variant variants = 1;
+}
+
+// ============================================================================
+// Media Asset Messages
+// ============================================================================
+
+// MediaAsset represents an image or video asset
+message MediaAsset {
+  string id = 1;
+  string product_id = 2;
+  string variant_id = 3;
+  string type = 4;  // "image" or "video"
+  string url = 5;
+  string alt_text = 6;
+  int32 display_order = 7;
+  google.protobuf.Timestamp created_at = 8;
+  google.protobuf.Timestamp updated_at = 9;
+}
+
+// MediaAssetCreateRequest for creating a media asset
+message MediaAssetCreateRequest {
+  string type = 1;
+  string url = 2;
+  string alt_text = 3;
+  int32 display_order = 4;
+}
+
+// MediaAssetUpdateRequest for updating a media asset
+message MediaAssetUpdateRequest {
+  string alt_text = 1;
+  int32 display_order = 2;
+}
+
+// MediaAssetListResponse for listing media assets
+message MediaAssetListResponse {
+  repeated MediaAsset media_assets = 1;
+}
+
+// ============================================================================
+// Product Type Messages
+// ============================================================================
+
+// ProductType represents a product type template
+message ProductType {
+  string id = 1;
+  string name = 2;
+  string description = 3;
+  repeated AttributeDefinition attribute_definitions = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
+}
+
+// AttributeDefinition defines an attribute schema
+message AttributeDefinition {
+  string id = 1;
+  string product_type_id = 2;
+  string attribute_name = 3;
+  string data_type = 4;  // "string", "number", "boolean", "date"
+  bool is_required = 5;
+  google.protobuf.Timestamp created_at = 6;
+}
+
+// ProductTypeCreateRequest for creating a product type
+message ProductTypeCreateRequest {
+  string name = 1;
+  string description = 2;
+  repeated AttributeDefinitionInput attribute_definitions = 3;
+}
+
+// AttributeDefinitionInput for creating attribute definitions
+message AttributeDefinitionInput {
+  string attribute_name = 1;
+  string data_type = 2;
+  bool is_required = 3;
+}
+
+// ProductTypeUpdateRequest for updating a product type
+message ProductTypeUpdateRequest {
+  string name = 1;
+  string description = 2;
+  repeated AttributeDefinitionInput attribute_definitions = 3;
+}
+
+// ProductTypeListResponse for listing product types
+message ProductTypeListResponse {
+  repeated ProductType product_types = 1;
+}
+
