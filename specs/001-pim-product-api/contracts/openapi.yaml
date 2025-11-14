@@ -1,0 +1,1035 @@
+openapi: 3.0.3
+info:
+  title: PIM Product API
+  description: |
+    RESTful API for Product Information Management system supporting flexible attributes,
+    variants, media assets, and product type templates.
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@example.com
+
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Local development server
+  - url: https://api.example.com/api/v1
+    description: Production server
+
+tags:
+  - name: Products
+    description: Product management operations
+  - name: Variants
+    description: Product variant operations
+  - name: Media Assets
+    description: Media asset management
+  - name: Product Types
+    description: Product type template management
+
+paths:
+  # ============================================================================
+  # PRODUCTS
+  # ============================================================================
+  
+  /products:
+    post:
+      tags: [Products]
+      summary: Create a new product
+      description: Creates a new product with flexible attributes
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductCreate'
+            examples:
+              simple:
+                summary: Simple product
+                value:
+                  name: "Blue T-Shirt"
+                  sku: "TSHIRT-BLUE-001"
+                  description: "Comfortable cotton t-shirt"
+                  attributes:
+                    color:
+                      type: "string"
+                      value: "blue"
+                    material:
+                      type: "string"
+                      value: "cotton"
+              with_template:
+                summary: Product with template
+                value:
+                  name: "Laptop Pro"
+                  sku: "LAPTOP-PRO-001"
+                  description: "High-performance laptop"
+                  product_type_id: "550e8400-e29b-41d4-a716-446655440000"
+                  attributes:
+                    brand:
+                      type: "string"
+                      value: "TechBrand"
+                    weight:
+                      type: "number"
+                      value: 1.5
+                    warranty_months:
+                      type: "number"
+                      value: 24
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    get:
+      tags: [Products]
+      summary: List all products
+      description: Retrieves a paginated list of products with optional filtering
+      operationId: listProducts
+      parameters:
+        - name: page
+          in: query
+          description: Page number (1-indexed)
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: page_size
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 100
+        - name: product_type_id
+          in: query
+          description: Filter by product type ID
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: List of products
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  
+  /products/{id}:
+    parameters:
+      - $ref: '#/components/parameters/ProductId'
+    
+    get:
+      tags: [Products]
+      summary: Get product by ID
+      description: Retrieves a single product with all attributes and related data
+      operationId: getProduct
+      responses:
+        '200':
+          description: Product details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductWithRelations'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    put:
+      tags: [Products]
+      summary: Update product
+      description: Updates product fields and attributes
+      operationId: updateProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductUpdate'
+      responses:
+        '200':
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    delete:
+      tags: [Products]
+      summary: Delete product
+      description: Deletes a product and cascades to variants and media assets
+      operationId: deleteProduct
+      responses:
+        '204':
+          description: Product deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  
+  # ============================================================================
+  # VARIANTS
+  # ============================================================================
+  
+  /products/{productId}/variants:
+    parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    
+    post:
+      tags: [Variants]
+      summary: Create a variant
+      description: Creates a new variant for a product
+      operationId: createVariant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VariantCreate'
+            example:
+              sku: "TSHIRT-BLUE-M"
+              attributes:
+                size:
+                  type: "string"
+                  value: "M"
+                price:
+                  type: "number"
+                  value: 29.99
+      responses:
+        '201':
+          description: Variant created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Variant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    get:
+      tags: [Variants]
+      summary: List variants for a product
+      description: Retrieves all variants for a specific product
+      operationId: listVariants
+      responses:
+        '200':
+          description: List of variants
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  variants:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Variant'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  
+  /variants/{id}:
+    parameters:
+      - $ref: '#/components/parameters/VariantId'
+    
+    get:
+      tags: [Variants]
+      summary: Get variant by ID
+      description: Retrieves a single variant with all attributes
+      operationId: getVariant
+      responses:
+        '200':
+          description: Variant details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VariantWithRelations'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    put:
+      tags: [Variants]
+      summary: Update variant
+      description: Updates variant attributes
+      operationId: updateVariant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VariantUpdate'
+      responses:
+        '200':
+          description: Variant updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Variant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    delete:
+      tags: [Variants]
+      summary: Delete variant
+      description: Deletes a variant and its media assets
+      operationId: deleteVariant
+      responses:
+        '204':
+          description: Variant deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  
+  # ============================================================================
+  # MEDIA ASSETS
+  # ============================================================================
+  
+  /products/{productId}/media:
+    parameters:
+      - name: productId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    
+    post:
+      tags: [Media Assets]
+      summary: Attach media to product
+      description: Creates a new media asset for a product
+      operationId: createProductMedia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaAssetCreate'
+      responses:
+        '201':
+          description: Media asset created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaAsset'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    get:
+      tags: [Media Assets]
+      summary: List product media assets
+      description: Retrieves all media assets for a product, ordered by display_order
+      operationId: listProductMedia
+      responses:
+        '200':
+          description: List of media assets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  media_assets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MediaAsset'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  
+  /variants/{variantId}/media:
+    parameters:
+      - name: variantId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    
+    post:
+      tags: [Media Assets]
+      summary: Attach media to variant
+      description: Creates a new media asset for a variant
+      operationId: createVariantMedia
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaAssetCreate'
+      responses:
+        '201':
+          description: Media asset created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaAsset'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    get:
+      tags: [Media Assets]
+      summary: List variant media assets
+      description: Retrieves all media assets for a variant, ordered by display_order
+      operationId: listVariantMedia
+      responses:
+        '200':
+          description: List of media assets
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  media_assets:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MediaAsset'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  
+  /media/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    
+    put:
+      tags: [Media Assets]
+      summary: Update media asset
+      description: Updates media asset metadata (alt_text, display_order)
+      operationId: updateMediaAsset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MediaAssetUpdate'
+      responses:
+        '200':
+          description: Media asset updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MediaAsset'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    delete:
+      tags: [Media Assets]
+      summary: Delete media asset
+      description: Deletes a media asset
+      operationId: deleteMediaAsset
+      responses:
+        '204':
+          description: Media asset deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  
+  # ============================================================================
+  # PRODUCT TYPES (TEMPLATES)
+  # ============================================================================
+  
+  /product-types:
+    post:
+      tags: [Product Types]
+      summary: Create product type template
+      description: Creates a new product type with attribute definitions
+      operationId: createProductType
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductTypeCreate'
+            example:
+              name: "Clothing"
+              description: "Apparel and clothing products"
+              attribute_definitions:
+                - attribute_name: "size"
+                  data_type: "string"
+                  is_required: true
+                - attribute_name: "color"
+                  data_type: "string"
+                  is_required: true
+                - attribute_name: "material"
+                  data_type: "string"
+                  is_required: false
+      responses:
+        '201':
+          description: Product type created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductType'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    get:
+      tags: [Product Types]
+      summary: List all product types
+      description: Retrieves all product type templates
+      operationId: listProductTypes
+      responses:
+        '200':
+          description: List of product types
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  product_types:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ProductType'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  
+  /product-types/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    
+    get:
+      tags: [Product Types]
+      summary: Get product type by ID
+      description: Retrieves a product type with all attribute definitions
+      operationId: getProductType
+      responses:
+        '200':
+          description: Product type details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductType'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    put:
+      tags: [Product Types]
+      summary: Update product type
+      description: Updates product type and attribute definitions
+      operationId: updateProductType
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductTypeUpdate'
+      responses:
+        '200':
+          description: Product type updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductType'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    
+    delete:
+      tags: [Product Types]
+      summary: Delete product type
+      description: Deletes a product type template. Products referencing it become untyped.
+      operationId: deleteProductType
+      responses:
+        '204':
+          description: Product type deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+# ==============================================================================
+# COMPONENTS
+# ==============================================================================
+
+components:
+  parameters:
+    ProductId:
+      name: id
+      in: path
+      required: true
+      description: Product UUID
+      schema:
+        type: string
+        format: uuid
+    
+    VariantId:
+      name: id
+      in: path
+      required: true
+      description: Variant UUID
+      schema:
+        type: string
+        format: uuid
+  
+  schemas:
+    # Attribute value (flexible type)
+    AttributeValue:
+      type: object
+      required: [type, value]
+      properties:
+        type:
+          type: string
+          enum: [string, number, boolean, date]
+        value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: boolean
+            - type: string
+              format: date
+      example:
+        type: "string"
+        value: "blue"
+    
+    # Attributes collection
+    Attributes:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/AttributeValue'
+      example:
+        color:
+          type: "string"
+          value: "blue"
+        size:
+          type: "string"
+          value: "XL"
+        weight:
+          type: "number"
+          value: 2.5
+    
+    # Product schemas
+    ProductCreate:
+      type: object
+      required: [name, sku]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 500
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: '^[a-zA-Z0-9_-]+$'
+        description:
+          type: string
+          maxLength: 10000
+        product_type_id:
+          type: string
+          format: uuid
+          nullable: true
+        attributes:
+          $ref: '#/components/schemas/Attributes'
+    
+    ProductUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 500
+        description:
+          type: string
+          maxLength: 10000
+        product_type_id:
+          type: string
+          format: uuid
+          nullable: true
+        attributes:
+          $ref: '#/components/schemas/Attributes'
+    
+    Product:
+      type: object
+      required: [id, name, sku, attributes, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        sku:
+          type: string
+        description:
+          type: string
+          nullable: true
+        product_type_id:
+          type: string
+          format: uuid
+          nullable: true
+        attributes:
+          $ref: '#/components/schemas/Attributes'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    ProductWithRelations:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+        - type: object
+          properties:
+            variants:
+              type: array
+              items:
+                $ref: '#/components/schemas/Variant'
+            media_assets:
+              type: array
+              items:
+                $ref: '#/components/schemas/MediaAsset'
+    
+    # Variant schemas
+    VariantCreate:
+      type: object
+      required: [sku]
+      properties:
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: '^[a-zA-Z0-9_-]+$'
+        attributes:
+          $ref: '#/components/schemas/Attributes'
+    
+    VariantUpdate:
+      type: object
+      properties:
+        attributes:
+          $ref: '#/components/schemas/Attributes'
+    
+    Variant:
+      type: object
+      required: [id, product_id, sku, attributes, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+        sku:
+          type: string
+        attributes:
+          $ref: '#/components/schemas/Attributes'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    VariantWithRelations:
+      allOf:
+        - $ref: '#/components/schemas/Variant'
+        - type: object
+          properties:
+            media_assets:
+              type: array
+              items:
+                $ref: '#/components/schemas/MediaAsset'
+    
+    # Media Asset schemas
+    MediaAssetCreate:
+      type: object
+      required: [type, url]
+      properties:
+        type:
+          type: string
+          enum: [image, video]
+        url:
+          type: string
+          format: uri
+          maxLength: 2000
+        alt_text:
+          type: string
+          maxLength: 500
+        display_order:
+          type: integer
+          default: 0
+    
+    MediaAssetUpdate:
+      type: object
+      properties:
+        alt_text:
+          type: string
+          maxLength: 500
+        display_order:
+          type: integer
+    
+    MediaAsset:
+      type: object
+      required: [id, type, url, display_order, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        product_id:
+          type: string
+          format: uuid
+          nullable: true
+        variant_id:
+          type: string
+          format: uuid
+          nullable: true
+        type:
+          type: string
+          enum: [image, video]
+        url:
+          type: string
+          format: uri
+        alt_text:
+          type: string
+          nullable: true
+        display_order:
+          type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    # Product Type schemas
+    AttributeDefinition:
+      type: object
+      required: [attribute_name, data_type, is_required]
+      properties:
+        id:
+          type: string
+          format: uuid
+        attribute_name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: '^[a-zA-Z0-9_]+$'
+        data_type:
+          type: string
+          enum: [string, number, boolean, date]
+        is_required:
+          type: boolean
+          default: false
+    
+    ProductTypeCreate:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 1000
+        attribute_definitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttributeDefinition'
+    
+    ProductTypeUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 1000
+        attribute_definitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttributeDefinition'
+    
+    ProductType:
+      type: object
+      required: [id, name, created_at, updated_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        attribute_definitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttributeDefinition'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    
+    # Pagination
+    Pagination:
+      type: object
+      required: [page, page_size, total_items, total_pages]
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        page_size:
+          type: integer
+          minimum: 1
+        total_items:
+          type: integer
+          minimum: 0
+        total_pages:
+          type: integer
+          minimum: 0
+    
+    # Error schemas
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              enum: [bad_request, not_found, conflict, internal_error]
+            message:
+              type: string
+            details:
+              type: object
+              additionalProperties: true
+      example:
+        error:
+          code: "bad_request"
+          message: "Invalid input"
+          details:
+            field: "sku"
+            reason: "SKU already exists"
+  
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "bad_request"
+              message: "Invalid request body"
+    
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "not_found"
+              message: "Resource not found"
+    
+    Conflict:
+      description: Conflict - resource already exists
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "conflict"
+              message: "SKU already exists"
+    
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: "internal_error"
+              message: "An unexpected error occurred"
+
