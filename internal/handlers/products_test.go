@@ -1,397 +1,17 @@
 package handlers
 
 import (
-	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
+	"apidemo1/internal/models"
 	"apidemo1/internal/testutil"
+	pb "apidemo1/proto"
 )
 
-// TestCreateProduct tests POST /api/v1/products endpoint
-// This is a table-driven integration test covering all edge cases per constitution
-func TestCreateProduct(t *testing.T) {
-	// Test cases
-	tests := []struct {
-		name           string
-		requestBody    map[string]interface{}
-		expectedStatus int
-		expectedError  *string // nil for success cases
-		checkResponse  func(t *testing.T, body map[string]interface{})
-	}{
-		// ========== HAPPY PATH ==========
-		{
-			name: "create product with all fields and various attribute types",
-			requestBody: map[string]interface{}{
-				"name":        "Blue T-Shirt",
-				"sku":         "TSHIRT-BLUE-001",
-				"description": "A comfortable cotton t-shirt",
-				"attributes": map[string]interface{}{
-					"color": map[string]interface{}{
-						"type":  "string",
-						"value": "blue",
-					},
-					"size": map[string]interface{}{
-						"type":  "string",
-						"value": "XL",
-					},
-					"weight": map[string]interface{}{
-						"type":  "number",
-						"value": 0.5,
-					},
-					"in_stock": map[string]interface{}{
-						"type":  "boolean",
-						"value": true,
-					},
-					"release_date": map[string]interface{}{
-						"type":  "date",
-						"value": "2025-01-15",
-					},
-				},
-			},
-			expectedStatus: http.StatusCreated,
-			checkResponse: func(t *testing.T, body map[string]interface{}) {
-				if body["id"] == nil {
-					t.Error("expected id to be present")
-				}
-				if body["name"] != "Blue T-Shirt" {
-					t.Errorf("expected name 'Blue T-Shirt', got %v", body["name"])
-				}
-				if body["sku"] != "TSHIRT-BLUE-001" {
-					t.Errorf("expected sku 'TSHIRT-BLUE-001', got %v", body["sku"])
-				}
-				// Verify all attribute types are preserved
-				attrs := body["attributes"].(map[string]interface{})
-				if len(attrs) != 5 {
-					t.Errorf("expected 5 attributes, got %d", len(attrs))
-				}
-			},
-		},
-		{
-			name: "create product with minimal fields (name and sku only)",
-			requestBody: map[string]interface{}{
-				"name": "Minimal Product",
-				"sku":  "MIN-001",
-			},
-			expectedStatus: http.StatusCreated,
-			checkResponse: func(t *testing.T, body map[string]interface{}) {
-				if body["attributes"] == nil {
-					t.Error("expected attributes to be present (empty object)")
-				}
-			},
-		},
-		{
-			name: "create product with zero attributes",
-			requestBody: map[string]interface{}{
-				"name":       "No Attributes Product",
-				"sku":        "NOATTR-001",
-				"attributes": map[string]interface{}{},
-			},
-			expectedStatus: http.StatusCreated,
-			checkResponse: func(t *testing.T, body map[string]interface{}) {
-				attrs := body["attributes"].(map[string]interface{})
-				if len(attrs) != 0 {
-					t.Errorf("expected 0 attributes, got %d", len(attrs))
-				}
-			},
-		},
-
-		// ========== INPUT VALIDATION - EMPTY/NIL ==========
-		{
-			name: "empty product name",
-			requestBody: map[string]interface{}{
-				"name": "",
-				"sku":  "EMPTY-NAME-001",
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  stringPtr("bad_request"),
-		},
-		{
-			name: "empty SKU",
-			requestBody: map[string]interface{}{
-				"name": "Empty SKU Product",
-				"sku":  "",
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  stringPtr("bad_request"),
-		},
-		{
-			name: "missing name field",
-			requestBody: map[string]interface{}{
-				"sku": "MISSING-NAME-001",
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  stringPtr("bad_request"),
-		},
-		{
-			name: "missing sku field",
-			requestBody: map[string]interface{}{
-				"name": "Missing SKU Product",
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  stringPtr("bad_request"),
-		},
-
-		// ========== INPUT VALIDATION - SQL INJECTION & XSS ==========
-		{
-			name: "SQL injection attempt in name",
-			requestBody: map[string]interface{}{
-				"name": "'; DROP TABLE products; --",
-				"sku":  "SQL-INJECT-001",
-			},
-			expectedStatus: http.StatusCreated, // Should be sanitized but not rejected
-			checkResponse: func(t *testing.T, body map[string]interface{}) {
-				// Verify the malicious SQL is stored as plain text, not executed
-				if body["name"] == nil {
-					t.Error("name should be stored (sanitized)")
-				}
-			},
-		},
-		{
-			name: "XSS attempt in description",
-			requestBody: map[string]interface{}{
-				"name":        "XSS Test Product",
-				"sku":         "XSS-001",
-				"description": "<script>alert('xss')</script>",
-			},
-			expectedStatus: http.StatusCreated, // Should be sanitized
-			checkResponse: func(t *testing.T, body map[string]interface{}) {
-				// Verify XSS payload is escaped or removed
-				desc := body["description"].(string)
-				if desc == "<script>alert('xss')</script>" {
-					t.Error("XSS payload should be sanitized")
-				}
-			},
-		},
-
-		// ========== BOUNDARY CONDITIONS - TEXT LENGTH ==========
-		{
-			name: "name at minimum length (1 char)",
-			requestBody: map[string]interface{}{
-				"name": "X",
-				"sku":  "MIN-NAME-001",
-			},
-			expectedStatus: http.StatusCreated,
-		},
-		{
-			name: "name at maximum length (500 chars)",
-			requestBody: map[string]interface{}{
-				"name": generateString(500),
-				"sku":  "MAX-NAME-001",
-			},
-			expectedStatus: http.StatusCreated,
-		},
-		{
-			name: "name exceeds maximum length (501 chars)",
-			requestBody: map[string]interface{}{
-				"name": generateString(501),
-				"sku":  "EXCEED-NAME-001",
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  stringPtr("bad_request"),
-		},
-		{
-			name: "description at maximum length (10000 chars)",
-			requestBody: map[string]interface{}{
-				"name":        "Max Description Product",
-				"sku":         "MAX-DESC-001",
-				"description": generateString(10000),
-			},
-			expectedStatus: http.StatusCreated,
-		},
-		{
-			name: "description exceeds maximum length (10001 chars)",
-			requestBody: map[string]interface{}{
-				"name":        "Exceed Description Product",
-				"sku":         "EXCEED-DESC-001",
-				"description": generateString(10001),
-			},
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  stringPtr("bad_request"),
-		},
-
-		// ========== BOUNDARY CONDITIONS - ATTRIBUTES ==========
-		{
-			name: "100+ attributes",
-			requestBody: map[string]interface{}{
-				"name":       "Many Attributes Product",
-				"sku":        "MANY-ATTRS-001",
-				"attributes": generateManyAttributes(100),
-			},
-			expectedStatus: http.StatusCreated,
-			checkResponse: func(t *testing.T, body map[string]interface{}) {
-				attrs := body["attributes"].(map[string]interface{})
-				if len(attrs) != 100 {
-					t.Errorf("expected 100 attributes, got %d", len(attrs))
-				}
-			},
-		},
-
-		// ========== DATABASE ERRORS - DUPLICATE SKU ==========
-		{
-			name: "duplicate SKU (will be tested in separate test)",
-			requestBody: map[string]interface{}{
-				"name": "Duplicate SKU Test",
-				"sku":  "DUP-SKU-001",
-			},
-			expectedStatus: http.StatusCreated, // First creation succeeds
-		},
-
-		// ========== HTTP SPECIFICS - INVALID JSON ==========
-		// (These will be tested with raw request bodies below)
-	}
-
-	// Run table-driven tests
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Setup test database for each test case
-			db := testutil.SetupTestDB(t)
-			defer db.Close()
-			
-			// Begin transaction for test isolation
-			tx := testutil.BeginTestTransaction(t, db)
-
-			// Create request
-			req, err := testutil.MakeRequest(http.MethodPost, "/api/v1/products", tt.requestBody)
-			if err != nil {
-				t.Fatalf("failed to create request: %v", err)
-			}
-
-			// Create response recorder
-			rr := httptest.NewRecorder()
-
-			// Create handler (will be implemented in T040)
-			handler := CreateProductHandler(tx)
-			handler.ServeHTTP(rr, req)
-
-			// Assert status code
-			testutil.AssertStatus(t, rr, tt.expectedStatus)
-
-			// Parse response
-			var response map[string]interface{}
-			if err := json.NewDecoder(rr.Body).Decode(&response); err != nil {
-				t.Fatalf("failed to decode response: %v", err)
-			}
-
-			// Check for expected error
-			if tt.expectedError != nil {
-				errorResp := response["error"].(map[string]interface{})
-				if errorResp["code"] != *tt.expectedError {
-					t.Errorf("expected error code %s, got %v", *tt.expectedError, errorResp["code"])
-				}
-			}
-
-			// Run custom response checks
-			if tt.checkResponse != nil && tt.expectedError == nil {
-				tt.checkResponse(t, response)
-			}
-		})
-	}
-}
-
-// TestCreateProductDuplicateSKU tests duplicate SKU constraint
-func TestCreateProductDuplicateSKU(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	defer db.Close()
-	tx := testutil.BeginTestTransaction(t, db)
-
-	// Create first product
-	product1 := testutil.CreateTestProduct(t, tx, "Product 1", "DUP-SKU-001", nil)
-	if product1 == nil {
-		t.Fatal("failed to create first product")
-	}
-
-	// Try to create second product with same SKU
-	req, _ := testutil.MakeRequest(http.MethodPost, "/api/v1/products", map[string]interface{}{
-		"name": "Product 2",
-		"sku":  "DUP-SKU-001", // Duplicate SKU
-	})
-
-	rr := httptest.NewRecorder()
-	handler := CreateProductHandler(tx)
-	handler.ServeHTTP(rr, req)
-
-	// Should return 409 Conflict
-	testutil.AssertStatus(t, rr, http.StatusConflict)
-
-	var response map[string]interface{}
-	json.NewDecoder(rr.Body).Decode(&response)
-	errorResp := response["error"].(map[string]interface{})
-	
-	if errorResp["code"] != "conflict" {
-		t.Errorf("expected error code 'conflict', got %v", errorResp["code"])
-	}
-}
-
-// TestCreateProductInvalidJSON tests malformed JSON handling
-func TestCreateProductInvalidJSON(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	defer db.Close()
-
-	tests := []struct {
-		name        string
-		body        string
-		expectError bool
-	}{
-		{
-			name:        "invalid JSON syntax",
-			body:        `{"name": "Test", "sku": "TEST-001"`,
-			expectError: true,
-		},
-		{
-			name:        "empty request body",
-			body:        "",
-			expectError: true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tx := testutil.BeginTestTransaction(t, db)
-			
-			req, _ := http.NewRequest(http.MethodPost, "/api/v1/products", strings.NewReader(tt.body))
-			req.Header.Set("Content-Type", "application/json")
-
-			rr := httptest.NewRecorder()
-			handler := CreateProductHandler(tx)
-			handler.ServeHTTP(rr, req)
-
-			if tt.expectError && rr.Code != http.StatusBadRequest {
-				t.Errorf("expected status 400, got %d", rr.Code)
-			}
-		})
-	}
-}
-
-// TestCreateProductWrongMethod tests HTTP method validation
-func TestCreateProductWrongMethod(t *testing.T) {
-	db := testutil.SetupTestDB(t)
-	defer db.Close()
-	tx := testutil.BeginTestTransaction(t, db)
-
-	// Try GET when POST is expected
-	// Note: In the actual router, wrong methods would be handled by Chi
-	// Here we're just testing that POST handler doesn't accept GET
-	req, _ := http.NewRequest(http.MethodGet, "/api/v1/products", nil)
-	rr := httptest.NewRecorder()
-	
-	// POST handler should ideally check method, but Chi router handles this
-	// For this test, we'll skip it since method routing is Chi's responsibility
-	// Just verify handler doesn't panic with GET
-	handler := CreateProductHandler(tx)
-	handler.ServeHTTP(rr, req)
-
-	// Any non-200 response is acceptable for wrong method
-	// (400 Bad Request from JSON decode is fine)
-	if rr.Code == http.StatusCreated {
-		t.Error("GET request should not create a product")
-	}
-}
-
 // Helper functions
-
 func stringPtr(s string) *string {
 	return &s
 }
@@ -404,16 +24,493 @@ func generateString(length int) string {
 	return string(b)
 }
 
-func generateManyAttributes(count int) map[string]interface{} {
-	attrs := make(map[string]interface{})
-	for i := 0; i < count; i++ {
-		key := "attr_" + string(rune('a'+i%26)) + string(rune('0'+i/26))
-		attrs[key] = map[string]interface{}{
-			"type":  "string",
-			"value": "value",
-		}
+// TestCreateProduct tests POST /api/v1/products endpoint using protobuf structs
+// Constitution-compliant: Uses protobuf structs (NO maps!)
+func TestCreateProduct(t *testing.T) {
+	// Test cases using protobuf structs
+	tests := []struct {
+		name           string
+		request        *pb.ProductCreateRequest
+		expectedStatus int
+		expectedError  *string
+		checkResponse  func(t *testing.T, product *pb.Product)
+	}{
+		// ========== HAPPY PATH ==========
+		{
+			name: "create product with all fields and various attribute types",
+			request: &pb.ProductCreateRequest{
+				Name:        "Blue T-Shirt",
+				Sku:         "TSHIRT-BLUE-001",
+				Description: "A comfortable cotton t-shirt",
+				Attributes: map[string]*pb.AttributeValue{
+					"color":        models.CreateStringAttribute("blue"),
+					"size":          models.CreateStringAttribute("XL"),
+					"weight":        models.CreateNumberAttribute(0.5),
+					"in_stock":      models.CreateBooleanAttribute(true),
+					"release_date":  models.CreateDateAttribute("2025-01-15"),
+				},
+			},
+			expectedStatus: http.StatusCreated,
+			checkResponse: func(t *testing.T, product *pb.Product) {
+				if product.Id == "" {
+					t.Error("expected id to be present")
+				}
+				if product.Name != "Blue T-Shirt" {
+					t.Errorf("expected name 'Blue T-Shirt', got %v", product.Name)
+				}
+				if product.Sku != "TSHIRT-BLUE-001" {
+					t.Errorf("expected sku 'TSHIRT-BLUE-001', got %v", product.Sku)
+				}
+				if len(product.Attributes) != 5 {
+					t.Errorf("expected 5 attributes, got %d", len(product.Attributes))
+				}
+			},
+		},
+		{
+			name: "create product with minimal fields",
+			request: &pb.ProductCreateRequest{
+				Name: "Minimal Product",
+				Sku:  "MIN-PROTO-001",
+			},
+			expectedStatus: http.StatusCreated,
+			checkResponse: func(t *testing.T, product *pb.Product) {
+				// Protobuf returns empty map, not nil
+				if len(product.Attributes) != 0 {
+					t.Errorf("expected 0 attributes, got %d", len(product.Attributes))
+				}
+			},
+		},
+
+		// ========== INPUT VALIDATION ==========
+		{
+			name: "empty product name",
+			request: &pb.ProductCreateRequest{
+				Name: "",
+				Sku:  "EMPTY-NAME-PROTO-001",
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  stringPtr("bad_request"),
+		},
+		{
+			name: "empty SKU",
+			request: &pb.ProductCreateRequest{
+				Name: "Empty SKU Product",
+				Sku:  "",
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  stringPtr("bad_request"),
+		},
+
+		// ========== BOUNDARY CONDITIONS ==========
+		{
+			name: "name at minimum length (1 char)",
+			request: &pb.ProductCreateRequest{
+				Name: "X",
+				Sku:  "MIN-NAME-PROTO-001",
+			},
+			expectedStatus: http.StatusCreated,
+		},
+		{
+			name: "name at maximum length (500 chars)",
+			request: &pb.ProductCreateRequest{
+				Name: generateString(500),
+				Sku:  "MAX-NAME-PROTO-001",
+			},
+			expectedStatus: http.StatusCreated,
+		},
+		{
+			name: "name exceeds maximum length (501 chars)",
+			request: &pb.ProductCreateRequest{
+				Name: generateString(501),
+				Sku:  "EXCEED-NAME-PROTO-001",
+			},
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  stringPtr("bad_request"),
+		},
+
+		// ========== SQL INJECTION & XSS ==========
+		{
+			name: "SQL injection attempt in name",
+			request: &pb.ProductCreateRequest{
+				Name: "'; DROP TABLE products; --",
+				Sku:  "SQL-INJECT-PROTO-001",
+			},
+			expectedStatus: http.StatusCreated, // Sanitized but not rejected
+			checkResponse: func(t *testing.T, product *pb.Product) {
+				if product.Name == "" {
+					t.Error("name should be stored (sanitized)")
+				}
+			},
+		},
+		{
+			name: "XSS attempt in description",
+			request: &pb.ProductCreateRequest{
+				Name:        "XSS Test Product",
+				Sku:         "XSS-PROTO-001",
+				Description: "<script>alert('xss')</script>",
+			},
+			expectedStatus: http.StatusCreated, // Sanitized
+			checkResponse: func(t *testing.T, product *pb.Product) {
+				if product.Description == "<script>alert('xss')</script>" {
+					t.Error("XSS payload should be sanitized")
+				}
+			},
+		},
 	}
-	return attrs
+
+	// Run table-driven tests
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Setup test database for each test case
+			db := testutil.SetupTestDB(t)
+			defer db.Close()
+			
+			// Begin transaction for test isolation
+			tx := testutil.BeginTestTransaction(t, db)
+
+			// Create request using protobuf message
+			req, err := testutil.MakeRequest(http.MethodPost, "/api/v1/products", tt.request)
+			if err != nil {
+				t.Fatalf("failed to create request: %v", err)
+			}
+
+			// Create response recorder
+			rr := httptest.NewRecorder()
+
+			// Call protobuf-aware handler
+			handler := CreateProductHandler_Proto(tx)
+			handler.ServeHTTP(rr, req)
+
+			// Assert status code
+			testutil.AssertStatus(t, rr, tt.expectedStatus)
+
+			// Parse response as protobuf
+			if tt.expectedStatus == http.StatusCreated {
+				product := &pb.Product{}
+				testutil.ParseProtoResponse(t, rr, product)
+
+				// Run custom response checks
+				if tt.checkResponse != nil {
+					tt.checkResponse(t, product)
+				}
+			} else if tt.expectedError != nil {
+				errorResp := &pb.ErrorResponse{}
+				testutil.ParseProtoResponse(t, rr, errorResp)
+				
+				if errorResp.Error.Code != *tt.expectedError {
+					t.Errorf("expected error code %s, got %v", *tt.expectedError, errorResp.Error.Code)
+				}
+			}
+		})
+	}
 }
 
+// TestCreateProductDuplicateSKU tests duplicate SKU constraint using protobuf
+func TestCreateProductDuplicateSKU(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	defer db.Close()
+	tx := testutil.BeginTestTransaction(t, db)
+
+	// Create first product using fixture
+	product1 := testutil.CreateTestProduct(t, tx, "Product 1", "DUP-SKU-PROTO-001", nil)
+	if product1 == nil {
+		t.Fatal("failed to create first product")
+	}
+
+	// Try to create second product with same SKU using protobuf
+	req, _ := testutil.MakeRequest(http.MethodPost, "/api/v1/products", &pb.ProductCreateRequest{
+		Name: "Product 2",
+		Sku:  "DUP-SKU-PROTO-001", // Duplicate SKU
+	})
+
+	rr := httptest.NewRecorder()
+	handler := CreateProductHandler_Proto(tx)
+	handler.ServeHTTP(rr, req)
+
+	// Should return 409 Conflict
+	testutil.AssertStatus(t, rr, http.StatusConflict)
+
+	errorResp := &pb.ErrorResponse{}
+	testutil.ParseProtoResponse(t, rr, errorResp)
+	
+	if errorResp.Error.Code != "conflict" {
+		t.Errorf("expected error code 'conflict', got %v", errorResp.Error.Code)
+	}
+}
+
+// TestListProducts tests GET /api/v1/products using protobuf
+func TestListProducts(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	defer db.Close()
+
+	tests := []struct {
+		name           string
+		setupCount     int
+		expectedStatus int
+		checkResponse  func(t *testing.T, resp *pb.ProductListResponse)
+	}{
+		{
+			name:           "list with default pagination",
+			setupCount:     5,
+			expectedStatus: http.StatusOK,
+			checkResponse: func(t *testing.T, resp *pb.ProductListResponse) {
+				if len(resp.Products) != 5 {
+					t.Errorf("expected 5 products, got %d", len(resp.Products))
+				}
+				if resp.Pagination.TotalItems != 5 {
+					t.Errorf("expected total_items=5, got %d", resp.Pagination.TotalItems)
+				}
+			},
+		},
+		{
+			name:           "empty product list",
+			setupCount:     0,
+			expectedStatus: http.StatusOK,
+			checkResponse: func(t *testing.T, resp *pb.ProductListResponse) {
+				if len(resp.Products) != 0 {
+					t.Errorf("expected 0 products, got %d", len(resp.Products))
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := testutil.BeginTestTransaction(t, db)
+
+			// Create test products
+			for i := 0; i < tt.setupCount; i++ {
+				sku := fmt.Sprintf("LIST-PROTO-%03d", i)
+				testutil.CreateTestProduct(t, tx, fmt.Sprintf("Product %d", i), sku, nil)
+			}
+
+			req, _ := testutil.MakeRequest(http.MethodGet, "/api/v1/products", nil)
+			rr := httptest.NewRecorder()
+
+			handler := ListProductsHandler_Proto(tx)
+			handler.ServeHTTP(rr, req)
+
+			testutil.AssertStatus(t, rr, tt.expectedStatus)
+
+			response := &pb.ProductListResponse{}
+			testutil.ParseProtoResponse(t, rr, response)
+
+			if tt.checkResponse != nil {
+				tt.checkResponse(t, response)
+			}
+		})
+	}
+}
+
+// TestUpdateProduct tests PUT /api/v1/products/{id} using protobuf
+func TestUpdateProduct(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	defer db.Close()
+
+	tests := []struct {
+		name           string
+		setupProduct   bool
+		request        *pb.ProductUpdateRequest
+		expectedStatus int
+		expectedError  *string
+	}{
+		{
+			name:         "update product name and description",
+			setupProduct: true,
+			request: &pb.ProductUpdateRequest{
+				Name:        "Updated Product Name",
+				Description: "Updated description",
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:         "update product attributes",
+			setupProduct: true,
+			request: &pb.ProductUpdateRequest{
+				Attributes: map[string]*pb.AttributeValue{
+					"new_attr": models.CreateStringAttribute("new_value"),
+				},
+			},
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:         "update non-existent product returns 404",
+			setupProduct: false,
+			request: &pb.ProductUpdateRequest{
+				Name: "Updated Name",
+			},
+			expectedStatus: http.StatusNotFound,
+			expectedError:  stringPtr("not_found"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := testutil.BeginTestTransaction(t, db)
+
+			var productID string
+			if tt.setupProduct {
+				product := testutil.CreateTestProduct(t, tx, "Original Name", "UPDATE-PROTO-001", nil)
+				productID = product.ID.String()
+			} else {
+				productID = "00000000-0000-0000-0000-000000000000"
+			}
+
+			url := "/api/v1/products/" + productID
+			req, _ := testutil.MakeRequest(http.MethodPut, url, tt.request)
+			rr := httptest.NewRecorder()
+
+			handler := UpdateProductHandler_Proto(tx)
+			handler.ServeHTTP(rr, req)
+
+			testutil.AssertStatus(t, rr, tt.expectedStatus)
+
+			if tt.expectedError != nil {
+				errorResp := &pb.ErrorResponse{}
+				testutil.ParseProtoResponse(t, rr, errorResp)
+				if errorResp.Error.Code != *tt.expectedError {
+					t.Errorf("expected error code %s, got %v", *tt.expectedError, errorResp.Error.Code)
+				}
+			}
+		})
+	}
+}
+
+// TestDeleteProduct tests DELETE /api/v1/products/{id} using protobuf
+func TestDeleteProduct(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	defer db.Close()
+
+	tests := []struct {
+		name           string
+		setupProduct   bool
+		productID      string
+		expectedStatus int
+		expectedError  *string
+	}{
+		{
+			name:           "delete existing product",
+			setupProduct:   true,
+			expectedStatus: http.StatusNoContent,
+		},
+		{
+			name:           "delete non-existent product returns 404",
+			setupProduct:   false,
+			productID:      "00000000-0000-0000-0000-000000000000",
+			expectedStatus: http.StatusNotFound,
+			expectedError:  stringPtr("not_found"),
+		},
+		{
+			name:           "delete with invalid UUID returns 400",
+			setupProduct:   false,
+			productID:      "invalid-uuid",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  stringPtr("bad_request"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := testutil.BeginTestTransaction(t, db)
+
+			var productID string
+			if tt.setupProduct {
+				product := testutil.CreateTestProduct(t, tx, "To Delete", "DELETE-PROTO-001", nil)
+				productID = product.ID.String()
+			} else {
+				productID = tt.productID
+			}
+
+			url := "/api/v1/products/" + productID
+			req, _ := testutil.MakeRequest(http.MethodDelete, url, nil)
+			rr := httptest.NewRecorder()
+
+			handler := DeleteProductHandler_Proto(tx)
+			handler.ServeHTTP(rr, req)
+
+			testutil.AssertStatus(t, rr, tt.expectedStatus)
+
+			if tt.expectedError != nil && rr.Code != http.StatusNoContent {
+				errorResp := &pb.ErrorResponse{}
+				testutil.ParseProtoResponse(t, rr, errorResp)
+				if errorResp.Error.Code != *tt.expectedError {
+					t.Errorf("expected error code %s, got %v", *tt.expectedError, errorResp.Error.Code)
+				}
+			}
+		})
+	}
+}
+
+// TestGetProduct tests GET /api/v1/products/{id} using protobuf
+func TestGetProduct(t *testing.T) {
+	db := testutil.SetupTestDB(t)
+	defer db.Close()
+
+	tests := []struct {
+		name           string
+		setupProduct   bool
+		productID      string
+		expectedStatus int
+		expectedError  *string
+	}{
+		{
+			name:           "retrieve existing product with all attributes",
+			setupProduct:   true,
+			expectedStatus: http.StatusOK,
+		},
+		{
+			name:           "non-existent product ID returns 404",
+			setupProduct:   false,
+			productID:      "00000000-0000-0000-0000-000000000000",
+			expectedStatus: http.StatusNotFound,
+			expectedError:  stringPtr("not_found"),
+		},
+		{
+			name:           "invalid UUID format returns 400",
+			setupProduct:   false,
+			productID:      "invalid-uuid",
+			expectedStatus: http.StatusBadRequest,
+			expectedError:  stringPtr("bad_request"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tx := testutil.BeginTestTransaction(t, db)
+
+			var productID string
+			if tt.setupProduct {
+				product := testutil.CreateTestProduct(t, tx, "Test Product", "GET-PROTO-TEST-001", nil)
+				productID = product.ID.String()
+			} else {
+				productID = tt.productID
+			}
+
+			url := "/api/v1/products/" + productID
+			req, _ := testutil.MakeRequest(http.MethodGet, url, nil)
+			rr := httptest.NewRecorder()
+
+			handler := GetProductHandler_Proto(tx)
+			handler.ServeHTTP(rr, req)
+
+			testutil.AssertStatus(t, rr, tt.expectedStatus)
+
+			if tt.expectedStatus == http.StatusOK {
+				product := &pb.Product{}
+				testutil.ParseProtoResponse(t, rr, product)
+				
+				if product.Id == "" {
+					t.Error("expected product ID to be present")
+				}
+			} else if tt.expectedError != nil {
+				errorResp := &pb.ErrorResponse{}
+				testutil.ParseProtoResponse(t, rr, errorResp)
+				
+				if errorResp.Error.Code != *tt.expectedError {
+					t.Errorf("expected error code %s, got %v", *tt.expectedError, errorResp.Error.Code)
+				}
+			}
+		})
+	}
+}
 

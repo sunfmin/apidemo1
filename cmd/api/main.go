@@ -64,33 +64,21 @@ func main() {
 			r.Delete("/{id}", handler.DeleteProduct)
 			
 			// Variant sub-routes under products (User Story 2 - Phase 4)
-			r.Route("/{productId}/variants", func(r chi.Router) {
-				r.Post("/", func(w http.ResponseWriter, r *http.Request) {
-					productID := chi.URLParam(r, "productId")
-					// Note: In production, use proper handler initialization
-					// For now, this creates a temporary connection
-					// The test handlers work with transactions
-					http.Error(w, "Use test handlers for variant creation", http.StatusNotImplemented)
-				})
-				r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-					productID := chi.URLParam(r, "productId")
-					http.Error(w, "Use test handlers for variant listing", http.StatusNotImplemented)
-				})
-			})
+			// TODO: Implement production variant handlers
+			// For now, commented out - use test handlers or implement later
+			// r.Route("/{productId}/variants", func(r chi.Router) {
+			// 	r.Post("/", variantHandler.CreateVariant)
+			// 	r.Get("/", variantHandler.ListVariants)
+			// })
 		})
 		
 		// Variant routes by ID (User Story 2 - Phase 4)
-		r.Route("/variants", func(r chi.Router) {
-			r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
-				http.Error(w, "Use test handlers for variant retrieval", http.StatusNotImplemented)
-			})
-			r.Put("/{id}", func(w http.ResponseWriter, r *http.Request) {
-				http.Error(w, "Use test handlers for variant update", http.StatusNotImplemented)
-			})
-			r.Delete("/{id}", func(w http.ResponseWriter, r *http.Request) {
-				http.Error(w, "Use test handlers for variant deletion", http.StatusNotImplemented)
-			})
-		})
+		// TODO: Implement production variant handlers
+		// r.Route("/variants", func(r chi.Router) {
+		// 	r.Get("/{id}", variantHandler.GetVariant)
+		// 	r.Put("/{id}", variantHandler.UpdateVariant)
+		// 	r.Delete("/{id}", variantHandler.DeleteVariant)
+		// })
 		
 		// Media asset routes will be added in Phase 5
 		// r.Mount("/media", mediaRouter(db))

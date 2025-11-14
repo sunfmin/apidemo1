@@ -9,13 +9,27 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 // MakeRequest creates an HTTP request for testing
+// Supports both protobuf messages and regular structs
 func MakeRequest(method, url string, body interface{}) (*http.Request, error) {
 	var reqBody io.Reader
 	if body != nil {
-		jsonBody, err := json.Marshal(body)
+		var jsonBody []byte
+		var err error
+
+		// Check if body is a protobuf message
+		if pbMsg, ok := body.(proto.Message); ok {
+			// Use protojson for protobuf messages (preserves protobuf semantics)
+			jsonBody, err = protojson.Marshal(pbMsg)
+		} else {
+			// Use standard json.Marshal for other types
+			jsonBody, err = json.Marshal(body)
+		}
+
 		if err != nil {
 			return nil, err
 		}
@@ -38,8 +52,25 @@ func MakeRequest(method, url string, body interface{}) (*http.Request, error) {
 func ParseJSONResponse(t *testing.T, resp *httptest.ResponseRecorder, target interface{}) {
 	t.Helper()
 
+	// Check if target is a protobuf message
+	if pbMsg, ok := target.(proto.Message); ok {
+		if err := protojson.Unmarshal(resp.Body.Bytes(), pbMsg); err != nil {
+			t.Fatalf("failed to decode protobuf response: %v\nBody: %s", err, resp.Body.String())
+		}
+		return
+	}
+
+	// Standard JSON decoding for non-protobuf types
 	if err := json.NewDecoder(resp.Body).Decode(target); err != nil {
 		t.Fatalf("failed to decode response body: %v\nBody: %s", err, resp.Body.String())
+	}
+}
+
+// ParseProtoResponse is a convenience function for parsing protobuf responses
+func ParseProtoResponse(t *testing.T, resp *httptest.ResponseRecorder, target proto.Message) {
+	t.Helper()
+	if err := protojson.Unmarshal(resp.Body.Bytes(), target); err != nil {
+		t.Fatalf("failed to decode protobuf response: %v\nBody: %s", err, resp.Body.String())
 	}
 }
 
