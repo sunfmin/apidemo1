@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 
+	"apidemo1/internal/handlers"
 	"apidemo1/internal/middleware"
 
 	"github.com/go-chi/chi/v5"
@@ -47,10 +48,21 @@ func main() {
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	// API routes will be mounted here
+	// Swagger UI endpoints
+	r.Get("/docs", handlers.ServeSwaggerUI)
+	r.Get("/api-spec", handlers.ServeOpenAPISpec)
+
+	// API routes
 	r.Route("/api/v1", func(r chi.Router) {
-		// Product routes will be added in Phase 3
-		// r.Mount("/products", productsRouter(db))
+		// Product routes (User Story 1 - Phase 3)
+		r.Route("/products", func(r chi.Router) {
+			handler := handlers.NewProductHandler(db)
+			r.Post("/", handler.CreateProduct)
+			r.Get("/", handler.ListProducts)
+			r.Get("/{id}", handler.GetProduct)
+			r.Put("/{id}", handler.UpdateProduct)
+			r.Delete("/{id}", handler.DeleteProduct)
+		})
 		
 		// Variant routes will be added in Phase 4
 		// r.Mount("/variants", variantsRouter(db))

@@ -81,7 +81,7 @@
 > **CRITICAL: Write these tests FIRST, ensure they FAIL before implementation**
 > **All tests MUST use real PostgreSQL, table-driven pattern, and cover edge cases**
 
-- [ ] T031 [US1] Integration test for POST /api/v1/products in internal/handlers/products_test.go
+- [x] T031 [US1] Integration test for POST /api/v1/products in internal/handlers/products_test.go
   - Happy path: Create product with name, SKU, description, and various attribute types (string, number, boolean, date)
   - Edge case - Input validation: Empty name, empty SKU, nil attributes, invalid JSON
   - Edge case - Input validation: SQL injection in name/description, XSS payloads in text fields
@@ -92,21 +92,21 @@
   - Use httptest.ResponseRecorder and real database fixtures
   - Table-driven test structure with test case structs
 
-- [ ] T032 [US1] Integration test for GET /api/v1/products/{id} in internal/handlers/products_test.go
+- [x] T032 [US1] Integration test for GET /api/v1/products/{id} in internal/handlers/products_test.go
   - Happy path: Retrieve existing product with all attributes
   - Edge case - Data state: Non-existent product ID (404 Not Found)
   - Edge case - Input validation: Invalid UUID format (400 Bad Request)
   - Edge case - HTTP specifics: Wrong HTTP method (POST when GET expected)
   - Table-driven test with multiple product fixtures
 
-- [ ] T033 [US1] Integration test for GET /api/v1/products (list with pagination) in internal/handlers/products_test.go
+- [x] T033 [US1] Integration test for GET /api/v1/products (list with pagination) in internal/handlers/products_test.go
   - Happy path: List products with default pagination (page=1, page_size=50)
   - Edge case - Boundary conditions: Empty product list, single product, 100+ products
   - Edge case - Input validation: Invalid page number (0, negative), invalid page_size (0, negative, >100)
   - Edge case - Query parameters: Filter by product_type_id (valid, invalid, non-existent)
   - Table-driven test with various pagination scenarios
 
-- [ ] T034 [US1] Integration test for PUT /api/v1/products/{id} in internal/handlers/products_test.go
+- [x] T034 [US1] Integration test for PUT /api/v1/products/{id} in internal/handlers/products_test.go
   - Happy path: Update product name, description, and attributes (add new, modify existing, remove)
   - Edge case - Data state: Update non-existent product (404 Not Found)
   - Edge case - Input validation: Empty name after update, invalid attribute types
@@ -114,7 +114,7 @@
   - Edge case - Concurrent updates: Optimistic locking or last-write-wins behavior
   - Table-driven test with multiple update scenarios
 
-- [ ] T035 [US1] Integration test for DELETE /api/v1/products/{id} in internal/handlers/products_test.go
+- [x] T035 [US1] Integration test for DELETE /api/v1/products/{id} in internal/handlers/products_test.go
   - Happy path: Delete product and verify it's removed
   - Edge case - Data state: Delete non-existent product (404 Not Found)
   - Edge case - Input validation: Invalid UUID format (400 Bad Request)
@@ -123,16 +123,16 @@
 
 ### Implementation for User Story 1
 
-- [ ] T036 [P] [US1] Create Product model struct in internal/models/product.go (id, name, sku, description, product_type_id, attributes, created_at, updated_at)
-- [ ] T037 [P] [US1] Create Attribute value types in internal/models/attribute.go (AttributeValue struct with type and value, helper methods for type validation)
-- [ ] T038 [US1] Create product repository in internal/repository/products.go (Create, GetByID, List, Update, Delete methods using sqlx)
-- [ ] T039 [US1] Create product validation logic in internal/validator/product.go (ValidateName, ValidateSKU, ValidateAttributes, ValidateAttributeTypes)
-- [ ] T040 [US1] Implement POST /api/v1/products handler in internal/handlers/products.go (create product with attribute validation)
-- [ ] T041 [US1] Implement GET /api/v1/products/{id} handler in internal/handlers/products.go (retrieve product by ID)
-- [ ] T042 [US1] Implement GET /api/v1/products handler in internal/handlers/products.go (list products with pagination and filtering)
-- [ ] T043 [US1] Implement PUT /api/v1/products/{id} handler in internal/handlers/products.go (update product with attribute validation)
-- [ ] T044 [US1] Implement DELETE /api/v1/products/{id} handler in internal/handlers/products.go (delete product)
-- [ ] T045 [US1] Wire product routes to Chi router in cmd/api/main.go (mount /api/v1/products routes)
+- [x] T036 [P] [US1] Create Product model struct in internal/models/product.go (id, name, sku, description, product_type_id, attributes, created_at, updated_at)
+- [x] T037 [P] [US1] Create Attribute value types in internal/models/attribute.go (AttributeValue struct with type and value, helper methods for type validation)
+- [x] T038 [US1] Create product repository in internal/repository/products.go (Create, GetByID, List, Update, Delete methods using sqlx)
+- [x] T039 [US1] Create product validation logic in internal/validator/product.go (ValidateName, ValidateSKU, ValidateAttributes, ValidateAttributeTypes)
+- [x] T040 [US1] Implement POST /api/v1/products handler in internal/handlers/products.go (create product with attribute validation)
+- [x] T041 [US1] Implement GET /api/v1/products/{id} handler in internal/handlers/products.go (retrieve product by ID)
+- [x] T042 [US1] Implement GET /api/v1/products handler in internal/handlers/products.go (list products with pagination and filtering)
+- [x] T043 [US1] Implement PUT /api/v1/products/{id} handler in internal/handlers/products.go (update product with attribute validation)
+- [x] T044 [US1] Implement DELETE /api/v1/products/{id} handler in internal/handlers/products.go (delete product)
+- [x] T045 [US1] Wire product routes to Chi router in cmd/api/main.go (mount /api/v1/products routes)
 
 **Checkpoint**: At this point, User Story 1 should be fully functional and testable independently
 

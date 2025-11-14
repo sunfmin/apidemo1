@@ -329,32 +329,4 @@ func TestDeleteProduct(t *testing.T) {
 	}
 }
 
-// Placeholder handler functions - will be implemented in T040-T044
-func GetProductHandler(db interface{}) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotImplemented)
-		w.Write([]byte(`{"error":{"code":"not_implemented","message":"Handler not yet implemented"}}`))
-	})
-}
-
-func ListProductsHandler(db interface{}) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotImplemented)
-		w.Write([]byte(`{"error":{"code":"not_implemented","message":"Handler not yet implemented"}}`))
-	})
-}
-
-func UpdateProductHandler(db interface{}) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotImplemented)
-		w.Write([]byte(`{"error":{"code":"not_implemented","message":"Handler not yet implemented"}}`))
-	})
-}
-
-func DeleteProductHandler(db interface{}) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotImplemented)
-		w.Write([]byte(`{"error":{"code":"not_implemented","message":"Handler not yet implemented"}}`))
-	})
-}
 
