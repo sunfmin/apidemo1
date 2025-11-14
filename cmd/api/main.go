@@ -48,6 +48,10 @@ func main() {
 		w.Write([]byte(`{"status":"ok"}`))
 	})
 
+	// Admin UI
+	r.Get("/admin", handlers.ServeAdminUI)
+	r.Get("/", handlers.ServeAdminUI) // Default to admin UI
+
 	// Swagger UI endpoints
 	r.Get("/docs", handlers.ServeSwaggerUI)
 	r.Get("/api-spec", handlers.ServeOpenAPISpec)
@@ -66,14 +70,12 @@ func main() {
 			// Variant sub-routes under products (User Story 2 - Phase 4)
 			r.Route("/{productId}/variants", func(r chi.Router) {
 				r.Post("/", func(w http.ResponseWriter, r *http.Request) {
-					productID := chi.URLParam(r, "productId")
 					// Note: In production, use proper handler initialization
 					// For now, this creates a temporary connection
 					// The test handlers work with transactions
 					http.Error(w, "Use test handlers for variant creation", http.StatusNotImplemented)
 				})
 				r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-					productID := chi.URLParam(r, "productId")
 					http.Error(w, "Use test handlers for variant listing", http.StatusNotImplemented)
 				})
 			})
