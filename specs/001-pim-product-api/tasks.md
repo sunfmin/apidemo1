@@ -26,16 +26,16 @@
 
 **Purpose**: Project initialization and basic structure
 
-- [ ] T001 Initialize Go module with `go mod init apidemo1`
-- [ ] T002 [P] Install Chi router dependency: `go get github.com/go-chi/chi/v5`
-- [ ] T003 [P] Install pgx driver dependency: `go get github.com/jackc/pgx/v5`
-- [ ] T004 [P] Install sqlx dependency: `go get github.com/jmoiron/sqlx`
-- [ ] T005 [P] Install golang-migrate dependencies: `go get github.com/golang-migrate/migrate/v4`
-- [ ] T006 Create project directory structure (cmd/api, internal/{models,handlers,repository,middleware,validator,testutil}, migrations)
-- [ ] T007 Create `docker-compose.yml` for PostgreSQL test database at repository root
-- [ ] T008 Create `Makefile` with test, run, migrate-up, migrate-down, migrate-create commands at repository root
-- [ ] T009 [P] Create `.gitignore` for Go projects at repository root
-- [ ] T010 [P] Create `.env.example` with DATABASE_URL and TEST_DATABASE_URL templates at repository root
+- [x] T001 Initialize Go module with `go mod init apidemo1`
+- [x] T002 [P] Install Chi router dependency: `go get github.com/go-chi/chi/v5`
+- [x] T003 [P] Install pgx driver dependency: `go get github.com/jackc/pgx/v5`
+- [x] T004 [P] Install sqlx dependency: `go get github.com/jmoiron/sqlx`
+- [x] T005 [P] Install golang-migrate dependencies: `go get github.com/golang-migrate/migrate/v4`
+- [x] T006 Create project directory structure (cmd/api, internal/{models,handlers,repository,middleware,validator,testutil}, migrations)
+- [x] T007 Create `docker-compose.yml` for PostgreSQL test database at repository root
+- [x] T008 Create `Makefile` with test, run, migrate-up, migrate-down, migrate-create commands at repository root
+- [x] T009 [P] Create `.gitignore` for Go projects at repository root
+- [x] T010 [P] Create `.env.example` with DATABASE_URL and TEST_DATABASE_URL templates at repository root
 
 ---
 
@@ -45,26 +45,26 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T011 Create database migration `001_create_products.up.sql` in migrations/ (products table with JSONB attributes)
-- [ ] T012 Create database migration `001_create_products.down.sql` in migrations/ (drop products table)
-- [ ] T013 Create database migration `002_create_variants.up.sql` in migrations/ (variants table with product_id FK)
-- [ ] T014 Create database migration `002_create_variants.down.sql` in migrations/ (drop variants table)
-- [ ] T015 Create database migration `003_create_media_assets.up.sql` in migrations/ (media_assets table with CHECK constraint)
-- [ ] T016 Create database migration `003_create_media_assets.down.sql` in migrations/ (drop media_assets table)
-- [ ] T017 Create database migration `004_create_product_types.up.sql` in migrations/ (product_types table)
-- [ ] T018 Create database migration `004_create_product_types.down.sql` in migrations/ (drop product_types table)
-- [ ] T019 Create database migration `005_create_attribute_definitions.up.sql` in migrations/ (attribute_definitions table)
-- [ ] T020 Create database migration `005_create_attribute_definitions.down.sql` in migrations/ (drop attribute_definitions table)
-- [ ] T021 Create database migration `006_create_triggers.up.sql` in migrations/ (updated_at trigger for all tables)
-- [ ] T022 Create database migration `006_create_triggers.down.sql` in migrations/ (drop triggers)
-- [ ] T023 [P] Create test database helper in internal/testutil/database.go (SetupTestDB, RunMigrations, BeginTestTransaction)
-- [ ] T024 [P] Create fixture helper utilities in internal/testutil/fixtures.go (CreateTestProduct, CreateTestVariant, CreateTestMediaAsset, CreateTestProductType)
-- [ ] T025 [P] Create HTTP test helpers in internal/testutil/http.go (MakeRequest, ParseJSONResponse, AssertStatus, AssertJSONEqual)
-- [ ] T026 [P] Implement logging middleware in internal/middleware/logger.go
-- [ ] T027 [P] Implement panic recovery middleware in internal/middleware/recovery.go
-- [ ] T028 [P] Implement CORS middleware in internal/middleware/cors.go
-- [ ] T029 Create error response types in internal/models/errors.go (ErrorResponse struct, error code constants)
-- [ ] T030 Create base HTTP router setup in cmd/api/main.go (Chi router, middleware stack, database connection pool)
+- [x] T011 Create database migration `001_create_products.up.sql` in migrations/ (products table with JSONB attributes)
+- [x] T012 Create database migration `001_create_products.down.sql` in migrations/ (drop products table)
+- [x] T013 Create database migration `002_create_variants.up.sql` in migrations/ (variants table with product_id FK)
+- [x] T014 Create database migration `002_create_variants.down.sql` in migrations/ (drop variants table)
+- [x] T015 Create database migration `003_create_media_assets.up.sql` in migrations/ (media_assets table with CHECK constraint)
+- [x] T016 Create database migration `003_create_media_assets.down.sql` in migrations/ (drop media_assets table)
+- [x] T017 Create database migration `004_create_product_types.up.sql` in migrations/ (product_types table)
+- [x] T018 Create database migration `004_create_product_types.down.sql` in migrations/ (drop product_types table)
+- [x] T019 Create database migration `005_create_attribute_definitions.up.sql` in migrations/ (attribute_definitions table)
+- [x] T020 Create database migration `005_create_attribute_definitions.down.sql` in migrations/ (drop attribute_definitions table)
+- [x] T021 Create database migration `006_create_triggers.up.sql` in migrations/ (updated_at trigger for all tables)
+- [x] T022 Create database migration `006_create_triggers.down.sql` in migrations/ (drop triggers)
+- [x] T023 [P] Create test database helper in internal/testutil/database.go (SetupTestDB, RunMigrations, BeginTestTransaction)
+- [x] T024 [P] Create fixture helper utilities in internal/testutil/fixtures.go (CreateTestProduct, CreateTestVariant, CreateTestMediaAsset, CreateTestProductType)
+- [x] T025 [P] Create HTTP test helpers in internal/testutil/http.go (MakeRequest, ParseJSONResponse, AssertStatus, AssertJSONEqual)
+- [x] T026 [P] Implement logging middleware in internal/middleware/logger.go
+- [x] T027 [P] Implement panic recovery middleware in internal/middleware/recovery.go
+- [x] T028 [P] Implement CORS middleware in internal/middleware/cors.go
+- [x] T029 Create error response types in internal/models/errors.go (ErrorResponse struct, error code constants)
+- [x] T030 Create base HTTP router setup in cmd/api/main.go (Chi router, middleware stack, database connection pool)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 

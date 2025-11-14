@@ -1,0 +1,47 @@
+# Go
+*.exe
+*.test
+vendor/
+*.out
+*.prof
+
+# Build artifacts
+bin/
+build/
+dist/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+
+# Test coverage
+coverage.out
+coverage.html
+
+# Temporary files
+*.tmp
+.cache/
+
+# Binary output
+cmd/api/api
+
