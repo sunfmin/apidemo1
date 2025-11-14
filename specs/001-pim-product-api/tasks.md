@@ -146,7 +146,7 @@
 
 ### Integration Tests for User Story 2 (MANDATORY) ⚠️
 
-- [ ] T046 [US2] Integration test for POST /api/v1/products/{productId}/variants in internal/handlers/variants_test.go
+- [x] T046 [US2] Integration test for POST /api/v1/products/{productId}/variants in internal/handlers/variants_test.go
   - Happy path: Create variant with SKU and variant-specific attributes (size, color, price)
   - Edge case - Data state: Create variant for non-existent parent product (404 Not Found)
   - Edge case - Input validation: Empty SKU, duplicate SKU (across products and variants), invalid attribute types
@@ -155,46 +155,46 @@
   - Edge case - HTTP specifics: Missing Content-Type, invalid JSON, wrong method
   - Table-driven test with comprehensive edge cases per constitution
 
-- [ ] T047 [US2] Integration test for GET /api/v1/products/{productId}/variants in internal/handlers/variants_test.go
+- [x] T047 [US2] Integration test for GET /api/v1/products/{productId}/variants in internal/handlers/variants_test.go
   - Happy path: List all variants for a product
   - Edge case - Data state: List variants for non-existent product (404 Not Found)
   - Edge case - Boundary conditions: Product with zero variants, product with many variants
   - Table-driven test with various scenarios
 
-- [ ] T048 [US2] Integration test for GET /api/v1/variants/{id} in internal/handlers/variants_test.go
+- [x] T048 [US2] Integration test for GET /api/v1/variants/{id} in internal/handlers/variants_test.go
   - Happy path: Retrieve single variant with all attributes and parent product reference
   - Edge case - Data state: Non-existent variant ID (404 Not Found)
   - Edge case - Input validation: Invalid UUID format (400 Bad Request)
   - Table-driven test with multiple variant fixtures
 
-- [ ] T049 [US2] Integration test for PUT /api/v1/variants/{id} in internal/handlers/variants_test.go
+- [x] T049 [US2] Integration test for PUT /api/v1/variants/{id} in internal/handlers/variants_test.go
   - Happy path: Update variant attributes without affecting parent product or other variants
   - Edge case - Data state: Update non-existent variant (404 Not Found)
   - Edge case - Database errors: Update SKU to duplicate (409 Conflict) if SKU update allowed
   - Table-driven test with update scenarios
 
-- [ ] T050 [US2] Integration test for DELETE /api/v1/variants/{id} in internal/handlers/variants_test.go
+- [x] T050 [US2] Integration test for DELETE /api/v1/variants/{id} in internal/handlers/variants_test.go
   - Happy path: Delete variant, verify parent product and other variants unaffected
   - Edge case - Data state: Delete non-existent variant (404 Not Found)
   - Table-driven test with delete scenarios
 
-- [ ] T051 [US2] Integration test for cascade delete behavior in internal/handlers/products_test.go
+- [x] T051 [US2] Integration test for cascade delete behavior in internal/handlers/products_test.go
   - Happy path: Delete parent product with variants, verify all variants are cascade deleted
   - Edge case - Database errors: Verify foreign key cascade works correctly
   - Table-driven test with cascade scenarios
 
 ### Implementation for User Story 2
 
-- [ ] T052 [P] [US2] Create Variant model struct in internal/models/variant.go (id, product_id, sku, attributes, created_at, updated_at)
-- [ ] T053 [US2] Create variant repository in internal/repository/variants.go (Create, GetByID, ListByProductID, Update, Delete methods using sqlx)
-- [ ] T054 [US2] Create variant validation logic in internal/validator/product.go (ValidateVariantSKU, ValidateVariantAttributes, CheckSKUUniqueness)
-- [ ] T055 [US2] Implement POST /api/v1/products/{productId}/variants handler in internal/handlers/variants.go
-- [ ] T056 [US2] Implement GET /api/v1/products/{productId}/variants handler in internal/handlers/variants.go
-- [ ] T057 [US2] Implement GET /api/v1/variants/{id} handler in internal/handlers/variants.go
-- [ ] T058 [US2] Implement PUT /api/v1/variants/{id} handler in internal/handlers/variants.go
-- [ ] T059 [US2] Implement DELETE /api/v1/variants/{id} handler in internal/handlers/variants.go
-- [ ] T060 [US2] Wire variant routes to Chi router in cmd/api/main.go (mount /api/v1/variants and /api/v1/products/{id}/variants routes)
-- [ ] T061 [US2] Update GET /api/v1/products/{id} handler to include variants in response (modify internal/handlers/products.go)
+- [x] T052 [P] [US2] Create Variant model struct in internal/models/variant.go (id, product_id, sku, attributes, created_at, updated_at)
+- [x] T053 [US2] Create variant repository in internal/repository/variants.go (Create, GetByID, ListByProductID, Update, Delete methods using sqlx)
+- [x] T054 [US2] Create variant validation logic in internal/validator/variant.go (ValidateVariantCreate, ValidateVariantUpdate)
+- [x] T055 [US2] Implement POST /api/v1/products/{productId}/variants handler in internal/handlers/variants.go
+- [x] T056 [US2] Implement GET /api/v1/products/{productId}/variants handler in internal/handlers/variants.go
+- [x] T057 [US2] Implement GET /api/v1/variants/{id} handler in internal/handlers/variants.go
+- [x] T058 [US2] Implement PUT /api/v1/variants/{id} handler in internal/handlers/variants.go
+- [x] T059 [US2] Implement DELETE /api/v1/variants/{id} handler in internal/handlers/variants.go
+- [x] T060 [US2] Wire variant routes to Chi router in cmd/api/main.go (mount /api/v1/variants and /api/v1/products/{id}/variants routes)
+- [x] T061 [US2] Update GET /api/v1/products/{id} handler to include variants in response (modify internal/handlers/products.go)
 
 **Checkpoint**: At this point, User Stories 1 AND 2 should both work independently
 

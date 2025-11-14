@@ -13,10 +13,6 @@ import (
 // TestCreateProduct tests POST /api/v1/products endpoint
 // This is a table-driven integration test covering all edge cases per constitution
 func TestCreateProduct(t *testing.T) {
-	// Setup test database
-	db := testutil.SetupTestDB(t)
-	defer db.Close()
-
 	// Test cases
 	tests := []struct {
 		name           string
@@ -250,6 +246,10 @@ func TestCreateProduct(t *testing.T) {
 	// Run table-driven tests
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Setup test database for each test case
+			db := testutil.SetupTestDB(t)
+			defer db.Close()
+			
 			// Begin transaction for test isolation
 			tx := testutil.BeginTestTransaction(t, db)
 
