@@ -13,13 +13,15 @@ This project follows strict development principles documented in [`.specify/memo
 3. **Edge Case Coverage (NON-NEGOTIABLE)** - Comprehensive edge case testing required
 4. **Real Database Fixtures** - Test data prepared via actual database operations
 5. **ServeHTTP Endpoint Testing** - API endpoints tested through full HTTP stack
+6. **Protobuf Data Structures** - All public API types defined in .proto files, no maps in tests
 
 ## Technology Stack
 
 - **Language**: Go 1.21+
 - **Database**: PostgreSQL 15+
 - **HTTP**: Standard library `net/http` or compatible framework
-- **Testing**: Go `testing` package with `httptest`
+- **Protocol Buffers**: protoc compiler with Go plugins for type-safe API contracts
+- **Testing**: Go `testing` package with `httptest` and protobuf-generated structs
 - **Database Driver**: TBD (pgx, database/sql, or ORM)
 
 ## Development Workflow
@@ -72,6 +74,7 @@ All contributions must comply with the project constitution. Key requirements:
 - ✅ Comprehensive edge case coverage
 - ✅ Real database fixtures
 - ✅ Tests through ServeHTTP interface
+- ✅ Protobuf structs for all API types (no maps)
 
 See [`.specify/memory/constitution.md`](.specify/memory/constitution.md) for complete principles.
 

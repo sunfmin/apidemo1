@@ -49,10 +49,13 @@ description: "Task list template for feature implementation"
 **Purpose**: Project initialization and basic structure
 
 - [ ] T001 Initialize Go module with `go mod init`
-- [ ] T002 [P] Setup PostgreSQL connection and database configuration
-- [ ] T003 [P] Configure environment variables for database URLs
-- [ ] T004 [P] Setup database migration framework (golang-migrate, goose, or embedded)
-- [ ] T005 [P] Configure linting (golangci-lint) and formatting (gofmt, goimports)
+- [ ] T002 [P] Install protobuf compiler and Go plugins (protoc-gen-go, protoc-gen-go-grpc)
+- [ ] T003 [P] Create proto/ or api/ directory for .proto definitions
+- [ ] T004 [P] Setup PostgreSQL connection and database configuration
+- [ ] T005 [P] Configure environment variables for database URLs
+- [ ] T006 [P] Setup database migration framework (golang-migrate, goose, or embedded)
+- [ ] T007 [P] Configure linting (golangci-lint) and formatting (gofmt, goimports)
+- [ ] T008 [P] Create Makefile target for protobuf code generation (make proto)
 
 ---
 
@@ -62,13 +65,15 @@ description: "Task list template for feature implementation"
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete
 
-- [ ] T006 Create initial database migrations for core tables
-- [ ] T007 [P] Setup HTTP router (Chi/Echo/Gin or net/http ServeMux)
-- [ ] T008 [P] Implement middleware: logging, recovery, CORS
-- [ ] T009 [P] Create database connection pool and health check
-- [ ] T010 [P] Setup test database helper (create/teardown or transaction rollback)
-- [ ] T011 Implement base error response types and JSON marshaling
-- [ ] T012 [P] Create fixture helper utilities for test database population
+- [ ] T006 Define core API protobuf messages in proto/ or api/ directory (.proto files)
+- [ ] T007 Generate Go code from protobuf definitions (run make proto)
+- [ ] T008 Create initial database migrations for core tables
+- [ ] T009 [P] Setup HTTP router (Chi/Echo/Gin or net/http ServeMux)
+- [ ] T010 [P] Implement middleware: logging, recovery, CORS
+- [ ] T011 [P] Create database connection pool and health check
+- [ ] T012 [P] Setup test database helper (create/teardown or transaction rollback)
+- [ ] T013 Implement base error response types using protobuf messages
+- [ ] T014 [P] Create fixture helper utilities for test database population (return protobuf structs)
 
 **Checkpoint**: Foundation ready - user story implementation can now begin in parallel
 
@@ -84,13 +89,15 @@ description: "Task list template for feature implementation"
 
 > **CRITICAL: Write these tests FIRST, ensure they FAIL before implementation**
 > **All tests MUST use real PostgreSQL, table-driven pattern, and cover edge cases**
+> **Tests MUST use protobuf-generated structs, NOT map[string]interface{}**
 
 - [ ] T010 [US1] Integration test for [endpoint] in [package]/[handler]_test.go
-  - Happy path test cases
+  - Happy path test cases using protobuf request/response structs
   - Edge cases: input validation, boundary conditions, auth errors
   - Edge cases: data state (404, conflicts), database errors, HTTP specifics
   - Use httptest.ResponseRecorder and real database fixtures
-  - Table-driven test structure with test case structs
+  - Table-driven test structure with protobuf struct instances
+  - NO map[string]interface{} usage - use typed protobuf structs only
 
 ### Implementation for User Story 1
 

@@ -18,9 +18,9 @@
 -->
 
 **Language/Version**: Go 1.21+ (or specify version)  
-**Primary Dependencies**: net/http (or framework like Chi/Echo/Gin), pgx or database/sql driver  
+**Primary Dependencies**: net/http (or framework like Chi/Echo/Gin), pgx or database/sql driver, protobuf compiler and Go plugin  
 **Storage**: PostgreSQL (real database for all tests)  
-**Testing**: Go testing package with httptest, table-driven integration tests  
+**Testing**: Go testing package with httptest, table-driven integration tests using protobuf-generated structs  
 **Target Platform**: [e.g., Linux server, iOS 15+, WASM or NEEDS CLARIFICATION]
 **Project Type**: [single/web/mobile - determines source structure]  
 **Performance Goals**: [domain-specific, e.g., 1000 req/s, 10k lines/sec, 60 fps or NEEDS CLARIFICATION]  
@@ -36,6 +36,7 @@
 - ✅ **Edge Case Coverage**: Tests include input validation, boundary conditions, auth errors, data state, database errors, HTTP specifics
 - ✅ **Real Database Fixtures**: Test data prepared via real database operations
 - ✅ **ServeHTTP Testing**: Endpoints tested through httptest.ResponseRecorder and actual HTTP handlers
+- ✅ **Protobuf Data Structures**: All public API types defined in .proto files, tests use generated structs (no maps)
 
 ## Project Structure
 

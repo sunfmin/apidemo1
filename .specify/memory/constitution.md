@@ -1,15 +1,16 @@
 <!--
 Sync Impact Report:
-- Version: NEW → 1.0.0 (initial constitution)
-- New sections: All sections created from template
-- Principles established:
-  1. Integration Testing First (No Mocking)
-  2. Table-Driven Test Design
-  3. Edge Case Coverage (NON-NEGOTIABLE)
-  4. Real Database Fixtures
-  5. ServeHTTP Endpoint Testing
-- Templates requiring updates: ✅ Will validate after constitution update
-- Rationale: Initial constitution for Go API backend with PostgreSQL integration testing philosophy
+- Version: 1.0.0 → 1.1.0 (MINOR bump - new principle added)
+- Modified principles: None
+- Added principles:
+  VI. Protobuf Data Structures (NEW) - All public API data structures MUST be defined in protobuf
+- Removed principles: None
+- Templates requiring updates:
+  ✅ .specify/templates/plan-template.md (Constitution Check section needs protobuf gate)
+  ✅ .specify/templates/tasks-template.md (Add protobuf generation tasks)
+  ✅ Technology Stack section (Add protobuf compiler and Go plugin)
+- Rationale: Enforce type safety and schema-first API design using protobuf. Eliminates map[string]interface{} usage in tests and production code, provides compile-time type checking, enables schema validation, and supports multiple language clients.
+- Impact: Existing code using map[string]interface{} in tests will need refactoring to use protobuf-generated structs
 -->
 
 # apidemo1 Constitution
@@ -75,27 +76,87 @@ API endpoints MUST be tested via ServeHTTP interface:
 
 **Rationale**: Testing through ServeHTTP ensures complete HTTP stack validation including routing, middleware, request parsing, content negotiation, error handling, and response formatting.
 
+### VI. Protobuf Data Structures
+
+All public API data structures MUST be defined in Protocol Buffers:
+- API request and response types MUST be defined in `.proto` files
+- Tests MUST use protobuf-generated structs, NOT `map[string]interface{}`
+- NO use of untyped maps for request/response handling in tests or production code
+- Protobuf definitions MUST be the single source of truth for API contracts
+- Generated Go structs MUST be used for JSON marshaling/unmarshaling
+- Protobuf messages MUST include field validation rules (e.g., `validate.rules`)
+- All API changes MUST update the corresponding `.proto` files first
+
+**Rationale**: Protobuf provides compile-time type safety, eliminates runtime type assertion errors, enables automatic validation, supports multiple language clients, enforces schema-first API design, and prevents the fragile `map[string]interface{}` pattern that loses type information and requires extensive runtime validation.
+
+**Examples**:
+```protobuf
+// api/product.proto
+message ProductCreateRequest {
+  string name = 1 [(validate.rules).string.min_len = 1];
+  string sku = 2 [(validate.rules).string.pattern = "^[a-zA-Z0-9_-]+$"];
+  string description = 3;
+  map<string, AttributeValue> attributes = 4;
+}
+
+message Product {
+  string id = 1;
+  string name = 2;
+  string sku = 3;
+  string description = 4;
+  map<string, AttributeValue> attributes = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+```
+
+**Test Usage**:
+```go
+// CORRECT: Use protobuf structs
+req := &pb.ProductCreateRequest{
+    Name: "Test Product",
+    SKU:  "TEST-001",
+}
+
+// WRONG: Do not use maps
+req := map[string]interface{}{
+    "name": "Test Product",
+    "sku":  "TEST-001",
+}
+```
+
 ## Technology Stack
 
-- **Language**: Go (version TBD - recommend Go 1.21+)
-- **Database**: PostgreSQL (version TBD - recommend PostgreSQL 15+)
-- **HTTP Framework**: Standard library `net/http` or framework TBD (e.g., Chi, Echo, Gin)
-- **Database Access**: Library TBD (e.g., `database/sql` + `pgx`, GORM, sqlc)
+- **Language**: Go 1.21+ (recommend latest stable)
+- **Database**: PostgreSQL 15+ (with JSONB support)
+- **HTTP Framework**: Chi router, Echo, Gin, or standard library `net/http`
+- **Database Access**: `database/sql` + `pgx`, sqlx, GORM, or sqlc
+- **Protocol Buffers**: protoc compiler, protoc-gen-go, protoc-gen-go-grpc
+- **Validation**: protoc-gen-validate for protobuf field validation
 - **Testing**: Standard library `testing` package with `httptest`
 - **Test Database**: Docker PostgreSQL container or dedicated test instance
-- **Migration Tool**: TBD (e.g., golang-migrate, goose, or embedded migrations)
+- **Migration Tool**: golang-migrate, goose, or embedded migrations
 
 ## Development Workflow
 
 ### Test-First Development (TDD)
 
-1. **Design Phase**: Design API contract (HTTP endpoint, request/response schemas)
-2. **Write Tests**: Create table-driven integration tests that cover happy path + edge cases
-3. **Verify Failure**: Run tests to confirm they fail (red phase)
-4. **Review Tests**: Review test design with team/lead before implementation
-5. **Implement**: Write minimal code to make tests pass (green phase)
-6. **Refactor**: Improve code quality while keeping tests green
-7. **No Implementation Before Tests**: Code written before test approval MUST be discarded
+1. **Design Phase**: Define API contract in `.proto` files (request/response messages)
+2. **Generate Code**: Run `protoc` to generate Go structs from protobuf definitions
+3. **Write Tests**: Create table-driven integration tests using protobuf structs (NOT maps)
+4. **Verify Failure**: Run tests to confirm they fail (red phase)
+5. **Review Tests**: Review test design with team/lead before implementation
+6. **Implement**: Write minimal code to make tests pass (green phase)
+7. **Refactor**: Improve code quality while keeping tests green
+8. **No Implementation Before Tests**: Code written before test approval MUST be discarded
+
+### Protobuf Workflow
+
+1. **Define Schema**: Create or update `.proto` files in `api/` or `proto/` directory
+2. **Generate Code**: Run `make proto` or `go generate` to create Go structs
+3. **Use in Code**: Import generated packages, use typed structs throughout
+4. **Validate**: Use protoc-gen-validate for automatic field validation
+5. **Version**: Use protobuf field numbers consistently (never reuse deleted field numbers)
 
 ### Test Database Management
 
@@ -108,9 +169,11 @@ API endpoints MUST be tested via ServeHTTP interface:
 ### Code Review Requirements
 
 - Pull requests MUST include integration tests for all new endpoints
+- Tests MUST use protobuf-generated structs (no `map[string]interface{}`)
 - Tests MUST demonstrate edge case coverage
 - Reviewers MUST verify table-driven test structure
 - Reviewers MUST verify no mocking is used for database or HTTP layers
+- Reviewers MUST verify `.proto` files are updated for API changes
 - Tests MUST be reviewed before implementation code
 
 ## Governance
@@ -120,8 +183,8 @@ API endpoints MUST be tested via ServeHTTP interface:
 1. Constitution changes MUST be proposed in writing with rationale
 2. Changes MUST be reviewed by project lead or team
 3. Version MUST be incremented per semantic versioning:
-   - **MAJOR**: Backward incompatible principle changes (e.g., removing no-mocking rule)
-   - **MINOR**: New principles added or major expansions
+   - **MAJOR**: Backward incompatible principle changes (e.g., removing no-mocking rule, allowing map[string]interface{})
+   - **MINOR**: New principles added or major expansions (e.g., adding protobuf requirement)
    - **PATCH**: Clarifications, examples, typo fixes
 4. All dependent templates and documentation MUST be updated to reflect changes
 
@@ -130,10 +193,10 @@ API endpoints MUST be tested via ServeHTTP interface:
 - All pull requests MUST comply with these principles
 - Constitution violations MUST be justified in PR description
 - Complexity that violates simplicity principles MUST document "why needed" and "simpler alternatives rejected"
-- When in doubt, integration test over unit test, real database over mock, table-driven over individual tests
+- When in doubt: integration test over unit test, real database over mock, table-driven over individual tests, protobuf structs over maps
 
 ### Version Control
 
 This constitution is version-controlled alongside code and follows the same review process as code changes.
 
-**Version**: 1.0.0 | **Ratified**: 2025-11-14 | **Last Amended**: 2025-11-14
+**Version**: 1.1.0 | **Ratified**: 2025-11-14 | **Last Amended**: 2025-11-14
