@@ -21,7 +21,7 @@ This project follows strict development principles documented in [`.specify/memo
 - **Database**: PostgreSQL 15+
 - **HTTP**: Standard library `net/http` or compatible framework
 - **Protocol Buffers**: protoc compiler with Go plugins for type-safe API contracts
-- **Testing**: Go `testing` package with `httptest` and protobuf-generated structs
+- **Testing**: Go `testing` package with `httptest`, protobuf-generated structs, and `protocmp` for assertions
 - **Database Driver**: TBD (pgx, database/sql, or ORM)
 
 ## Development Workflow

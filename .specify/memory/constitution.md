@@ -1,16 +1,18 @@
 <!--
 Sync Impact Report:
-- Version: 1.0.0 → 1.1.0 (MINOR bump - new principle added)
-- Modified principles: None
-- Added principles:
-  VI. Protobuf Data Structures (NEW) - All public API data structures MUST be defined in protobuf
+- Version: 1.1.0 → 1.1.1 (PATCH bump - clarification to existing principle)
+- Modified principles:
+  VI. Protobuf Data Structures - Added requirement for proper protobuf comparison in test assertions
+- Added requirements:
+  - Tests MUST use protocmp with go-cmp for protobuf message comparison
+  - Tests MUST NOT use == or reflect.DeepEqual for protobuf messages
 - Removed principles: None
 - Templates requiring updates:
-  ✅ .specify/templates/plan-template.md (Constitution Check section needs protobuf gate)
-  ✅ .specify/templates/tasks-template.md (Add protobuf generation tasks)
-  ✅ Technology Stack section (Add protobuf compiler and Go plugin)
-- Rationale: Enforce type safety and schema-first API design using protobuf. Eliminates map[string]interface{} usage in tests and production code, provides compile-time type checking, enables schema validation, and supports multiple language clients.
-- Impact: Existing code using map[string]interface{} in tests will need refactoring to use protobuf-generated structs
+  ✅ .specify/templates/tasks-template.md (Add protocmp dependency installation)
+  ✅ Test example in constitution (Add protocmp usage example)
+- Rationale: Standard == and reflect.DeepEqual don't handle protobuf semantics correctly (unknown fields, extensions, proto3 optional). The protocmp package from google.golang.org/protobuf/testing/protocmp provides proper comparison that respects protobuf message equality rules.
+- Impact: Tests comparing protobuf messages should use protocmp.Transform() with cmp.Diff()
+- Dependencies: Requires google.golang.org/protobuf/testing/protocmp (already available with protobuf)
 -->
 
 # apidemo1 Constitution
@@ -86,8 +88,10 @@ All public API data structures MUST be defined in Protocol Buffers:
 - Generated Go structs MUST be used for JSON marshaling/unmarshaling
 - Protobuf messages MUST include field validation rules (e.g., `validate.rules`)
 - All API changes MUST update the corresponding `.proto` files first
+- Tests MUST use proper protobuf comparison packages for assertions (e.g., `protocmp` with `google/go-cmp`)
+- Tests MUST NOT use standard `==` or `reflect.DeepEqual` for protobuf message comparison
 
-**Rationale**: Protobuf provides compile-time type safety, eliminates runtime type assertion errors, enables automatic validation, supports multiple language clients, enforces schema-first API design, and prevents the fragile `map[string]interface{}` pattern that loses type information and requires extensive runtime validation.
+**Rationale**: Protobuf provides compile-time type safety, eliminates runtime type assertion errors, enables automatic validation, supports multiple language clients, enforces schema-first API design, and prevents the fragile `map[string]interface{}` pattern that loses type information and requires extensive runtime validation. Proper protobuf comparison ensures correct field comparison including unknown fields, extensions, and proto semantics.
 
 **Examples**:
 ```protobuf
@@ -115,13 +119,35 @@ message Product {
 // CORRECT: Use protobuf structs
 req := &pb.ProductCreateRequest{
     Name: "Test Product",
-    SKU:  "TEST-001",
+    Sku:  "TEST-001",
 }
 
 // WRONG: Do not use maps
 req := map[string]interface{}{
     "name": "Test Product",
     "sku":  "TEST-001",
+}
+```
+
+**Test Assertions**:
+```go
+import (
+    "testing"
+    "github.com/google/go-cmp/cmp"
+    "google.golang.org/protobuf/testing/protocmp"
+)
+
+// CORRECT: Use protocmp for protobuf comparison
+expected := &pb.Product{Name: "Test", Sku: "TEST-001"}
+actual := &pb.Product{Name: "Test", Sku: "TEST-001"}
+
+if diff := cmp.Diff(expected, actual, protocmp.Transform()); diff != "" {
+    t.Errorf("Product mismatch (-want +got):\n%s", diff)
+}
+
+// WRONG: Do not use == or DeepEqual
+if actual != expected { // Incorrect for protobuf
+    t.Error("mismatch")
 }
 ```
 
@@ -134,6 +160,7 @@ req := map[string]interface{}{
 - **Protocol Buffers**: protoc compiler, protoc-gen-go, protoc-gen-go-grpc
 - **Validation**: protoc-gen-validate for protobuf field validation
 - **Testing**: Standard library `testing` package with `httptest`
+- **Test Comparison**: google/go-cmp with protocmp for protobuf message assertions
 - **Test Database**: Docker PostgreSQL container or dedicated test instance
 - **Migration Tool**: golang-migrate, goose, or embedded migrations
 
@@ -199,4 +226,4 @@ req := map[string]interface{}{
 
 This constitution is version-controlled alongside code and follows the same review process as code changes.
 
-**Version**: 1.1.0 | **Ratified**: 2025-11-14 | **Last Amended**: 2025-11-14
+**Version**: 1.1.1 | **Ratified**: 2025-11-14 | **Last Amended**: 2025-11-14

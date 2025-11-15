@@ -50,12 +50,13 @@ description: "Task list template for feature implementation"
 
 - [ ] T001 Initialize Go module with `go mod init`
 - [ ] T002 [P] Install protobuf compiler and Go plugins (protoc-gen-go, protoc-gen-go-grpc)
-- [ ] T003 [P] Create proto/ or api/ directory for .proto definitions
-- [ ] T004 [P] Setup PostgreSQL connection and database configuration
-- [ ] T005 [P] Configure environment variables for database URLs
-- [ ] T006 [P] Setup database migration framework (golang-migrate, goose, or embedded)
-- [ ] T007 [P] Configure linting (golangci-lint) and formatting (gofmt, goimports)
-- [ ] T008 [P] Create Makefile target for protobuf code generation (make proto)
+- [ ] T003 [P] Install google/go-cmp and protocmp for test assertions: `go get google.golang.org/protobuf/testing/protocmp`
+- [ ] T004 [P] Create proto/ or api/ directory for .proto definitions
+- [ ] T005 [P] Setup PostgreSQL connection and database configuration
+- [ ] T006 [P] Configure environment variables for database URLs
+- [ ] T007 [P] Setup database migration framework (golang-migrate, goose, or embedded)
+- [ ] T008 [P] Configure linting (golangci-lint) and formatting (gofmt, goimports)
+- [ ] T009 [P] Create Makefile target for protobuf code generation (make proto)
 
 ---
 
@@ -90,6 +91,7 @@ description: "Task list template for feature implementation"
 > **CRITICAL: Write these tests FIRST, ensure they FAIL before implementation**
 > **All tests MUST use real PostgreSQL, table-driven pattern, and cover edge cases**
 > **Tests MUST use protobuf-generated structs, NOT map[string]interface{}**
+> **Tests MUST use protocmp.Transform() with go-cmp for protobuf message assertions**
 
 - [ ] T010 [US1] Integration test for [endpoint] in [package]/[handler]_test.go
   - Happy path test cases using protobuf request/response structs
@@ -98,6 +100,8 @@ description: "Task list template for feature implementation"
   - Use httptest.ResponseRecorder and real database fixtures
   - Table-driven test structure with protobuf struct instances
   - NO map[string]interface{} usage - use typed protobuf structs only
+  - Use testutil.AssertProtoEqual() or cmp.Diff() with protocmp.Transform() for message comparison
+  - Do NOT use == or reflect.DeepEqual for protobuf message comparison
 
 ### Implementation for User Story 1
 

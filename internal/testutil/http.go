@@ -11,6 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 // MakeRequest creates an HTTP request for testing
@@ -88,8 +89,27 @@ func AssertStatus(t *testing.T, resp *httptest.ResponseRecorder, expected int) {
 func AssertJSONEqual(t *testing.T, expected, actual interface{}, msgAndArgs ...interface{}) {
 	t.Helper()
 
-	if diff := cmp.Diff(expected, actual); diff != "" {
+	// Use protocmp.Transform() if both are protobuf messages
+	opts := []cmp.Option{}
+	if _, ok := expected.(proto.Message); ok {
+		opts = append(opts, protocmp.Transform())
+	}
+
+	if diff := cmp.Diff(expected, actual, opts...); diff != "" {
 		t.Errorf("JSON mismatch (-expected +actual):\n%s", diff)
+		if len(msgAndArgs) > 0 {
+			t.Errorf("Additional context: %v", msgAndArgs...)
+		}
+	}
+}
+
+// AssertProtoEqual compares two protobuf messages for equality using protocmp
+// This is the correct way to compare protobuf messages per Constitution Principle VI
+func AssertProtoEqual(t *testing.T, expected, actual proto.Message, msgAndArgs ...interface{}) {
+	t.Helper()
+
+	if diff := cmp.Diff(expected, actual, protocmp.Transform()); diff != "" {
+		t.Errorf("Protobuf message mismatch (-want +got):\n%s", diff)
 		if len(msgAndArgs) > 0 {
 			t.Errorf("Additional context: %v", msgAndArgs...)
 		}
