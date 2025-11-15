@@ -10,7 +10,9 @@ import (
 	"apidemo1/internal/testutil"
 	pb "apidemo1/proto"
 
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
+	"google.golang.org/protobuf/testing/protocmp"
 )
 
 // TestCreateVariant tests POST /api/v1/products/{productId}/variants using protobuf
@@ -41,17 +43,31 @@ func TestCreateVariant(t *testing.T) {
 			},
 			expectedStatus: http.StatusCreated,
 			checkResponse: func(t *testing.T, variant *pb.Variant) {
+				// Verify IDs are present
 				if variant.Id == "" {
 					t.Error("expected id to be present")
 				}
 				if variant.ProductId == "" {
 					t.Error("expected product_id to be present")
 				}
-				if variant.Sku != "TSHIRT-BLUE-M-PROTO" {
-					t.Errorf("expected sku, got %v", variant.Sku)
+				
+				// Use protocmp directly (Constitution Principle VI - Example)
+				expected := &pb.Variant{
+					Id:        variant.Id,        // Use actual ID
+					ProductId: variant.ProductId, // Use actual product ID
+					Sku:       "TSHIRT-BLUE-M-PROTO",
+					Attributes: map[string]*pb.AttributeValue{
+						"size":  models.CreateStringAttribute("M"),
+						"color": models.CreateStringAttribute("blue"),
+						"price": models.CreateNumberAttribute(29.99),
+					},
+					CreatedAt: variant.CreatedAt,
+					UpdatedAt: variant.UpdatedAt,
 				}
-				if len(variant.Attributes) != 3 {
-					t.Errorf("expected 3 attributes, got %d", len(variant.Attributes))
+				
+				// Direct use of cmp.Diff with protocmp.Transform() per constitution
+				if diff := cmp.Diff(expected, variant, protocmp.Transform()); diff != "" {
+					t.Errorf("Variant mismatch (-want +got):\n%s", diff)
 				}
 			},
 		},
@@ -63,9 +79,17 @@ func TestCreateVariant(t *testing.T) {
 			},
 			expectedStatus: http.StatusCreated,
 			checkResponse: func(t *testing.T, variant *pb.Variant) {
-				if len(variant.Attributes) != 0 {
-					t.Errorf("expected 0 attributes, got %d", len(variant.Attributes))
+				// Use protocmp for verification
+				expected := &pb.Variant{
+					Id:         variant.Id,
+					ProductId:  variant.ProductId,
+					Sku:        "MIN-VARIANT-PROTO-001",
+					Attributes: map[string]*pb.AttributeValue{}, // Empty
+					CreatedAt:  variant.CreatedAt,
+					UpdatedAt:  variant.UpdatedAt,
 				}
+				
+				testutil.AssertProtoEqual(t, expected, variant)
 			},
 		},
 
